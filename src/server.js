@@ -1,17 +1,26 @@
 import dotenv from 'dotenv'
 dotenv.config();
 
-import express from 'express'
+
 import { connectDB } from './db/index.js';
+import { app } from './app.js';
 
-
-connectDB();
-const app=express();
 
 app.get('/',(req,res)=>{
     res.send("Hii i am Home")
 })
 
-app.listen(3000,()=>{
+connectDB()
+.then(()=>{
+    app.on("error",error=>{
+        console.log("Start errors",error)
+    })
+    app.listen(3000,()=>{
     console.log("server listening")
 })
+})
+.catch((error)=>{
+    console.log("something happened",error)
+})
+
+
