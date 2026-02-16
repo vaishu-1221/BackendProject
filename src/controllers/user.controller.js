@@ -22,12 +22,16 @@ const UserRegister=asyncHandler(async(req,res)=>{
         throw new ApiError(404,"All fields are required");
     }
 
-    const existedUser=User.findOne({
+    const existedUser=await User.findOne({
         $or:[{username},{email}]
     })
     if(existedUser){
         throw new ApiError(409,"User exist")
     }
+
+    // console.log("FILES:", req.files);
+    // console.log("BODY:", req.body);
+
 
     const AvatarLocalPath=req.files?.avatar[0]?.path;
     const CoverImageLocalPath=req.files?.coverImage[0]?.path;
@@ -35,8 +39,18 @@ const UserRegister=asyncHandler(async(req,res)=>{
         throw new ApiError(404,"Avatar is not found");
     }
 
+
+
     const avatar=await uploadOnCloudinary(AvatarLocalPath)
-    const coverImage=await uploadOnCloudinary(CoverImageLocalPath)
+
+    //     console.log("Avatar Local Path:", AvatarLocalPath);
+    // console.log("Cloudinary Response:", avatar);
+
+    let coverImage;
+    if (CoverImageLocalPath) {
+    coverImage = await uploadOnCloudinary(CoverImageLocalPath);
+    }
+
     if(!avatar){
         throw new ApiError(404,"Avatar not found")
     }
