@@ -77,4 +77,86 @@ const UserRegister=asyncHandler(async(req,res)=>{
 
 })
 
-export {UserRegister}
+    const generateAccessAndRefreshToken=async(userId)=>{
+            try {
+                const accessToken=await user.generateAccessToken()
+                const refreshToken=await user.generateRefreshToken()
+
+                user.refreshToken=refreshToken
+
+                await User.save({validateBeforeSave:false})
+
+                return {accessToken,refreshToken}
+            } catch (error) {
+                console.error("Something went wrong in login",error);
+            }
+    }
+
+const UserLogin=asyncHandler(async(req,res)=>{
+    //get data-from body
+    //email||username exist
+    //find user
+    //password check
+    //access & refresh Token generate
+    //send access & refresh Token cookies
+
+    const {email,username,password}=req.body
+
+    if(!username || !email){
+        throw new ApiError(400,"username or email required")
+    }
+
+    const user=await User.findOne({
+        $or:[{username},{email}]
+    })
+    if(!user){
+        throw new ApiError(404,"user not found")
+    }
+
+    const isPasswordValid=user.isPasswordCorrect(password)
+    if(!isPasswordValid){
+        throw new ApiError(400,"Password is invalid")
+    }
+
+
+    const {accessToken,refreshToken}=generateAccessAndRefreshToken(user._id)
+
+    const loggedInUser=await User.findById(user._id)
+    const options={
+        httpOnly:true,
+        secure:true
+    }
+    return res.status(200)
+            .cookie("accessToken",accessToken,options)
+            .cookie("refreshToken",refreshToken,options)
+            .json(new ApiResponse(200,
+                {
+                    user:loggedInUser,accessToken,refreshToken
+                },
+                "User login Successfully"
+            ))
+
+})
+
+const UserLogout=asyncHandler(async(req,res)=>{
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set:{refreshToken:undefined}
+        },
+        {
+            new:true
+        }
+    )
+    const options={
+        httpOnly:true,
+        secure:true
+    }
+    return res
+        .status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(new ApiResponse(200, {}, "User logged out successfully"))
+})
+
+export {UserRegister,UserLogin,UserLogout}
